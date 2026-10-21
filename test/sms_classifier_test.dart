@@ -53,5 +53,20 @@ void main() {
       const body = '您的还款已逾期，请立即处理，涉嫌影响征信，账单金额128元';
       expect(SmsClassifier.classify(body), SmsCategory.urgent);
     });
+
+    test('真实运维告警短信（无关键词、无金额）不会被向量兜底误判为账务', () {
+      // 回归用例：真机测试发现这类长文本（大量数字/英文缩写/路径字符串）
+      // 在字符 n-gram 向量上会和账务示例产生虚假相似度。
+      const body = "【建设银行】次要'六级'告警： 云化数仓-数据应用'B1'_作业执行超时:'D2\"N-P9EIL:"
+          "企业级信息应用计算子系统''ADWNG_DIM_NG_SRC_CST_NUM_REF_H_ADW_NGADWDATA_GPMP"
+          "P_ETL_000000000'作业运行时长超时,运行时长:61.00分钟,告警阈值:1h,执行用户:dip,"
+          "日志路径:/home/ap/dip/log/20261021/220f1676604a45db829bbbfc79246272";
+      expect(SmsClassifier.classify(body), isNot(SmsCategory.finance));
+    });
+
+    test('账务短信即使文案与内置示例差异较大，只要有金额信号就能被向量兜底识别', () {
+      const body = '尊敬的客户，您的账户发生一笔资金变动，涉及金额￥56.30，详情请查收。';
+      expect(SmsClassifier.classify(body), SmsCategory.finance);
+    });
   });
 }

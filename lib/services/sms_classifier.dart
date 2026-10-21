@@ -22,6 +22,12 @@ class SmsClassifier {
   /// 向量兜底时的最低相似度阈值，低于此值一律归为 other
   static const double _similarityThreshold = 0.22;
 
+  /// 金额信号：¥ / ￥ / 数字+元。真实场景里发现运维日志类长文本
+  /// （大量数字、英文缩写、路径字符串）会在字符 n-gram 向量上和账务示例
+  /// 产生虚假相似度，因此向量兜底命中"账务"时，必须有金额信号佐证，
+  /// 否则一律退回 other，避免把非账务内容误记一笔账。
+  static final RegExp _amountSignal = RegExp(r'[¥￥]|\d+(?:\.\d{1,2})?\s?元');
+
   /// 重要紧急：安全风险 / 催收逾期 / 停机断供 / 法律事务等需要立刻处理的内容
   static const Set<String> _urgentKeywords = {
     '异常登录', '安全提醒', '风险提示', '盗刷', '涉嫌', '违法', '冻结', '紧急',
@@ -152,6 +158,9 @@ class SmsClassifier {
       }
     }
     if (bestSim < _similarityThreshold) return SmsCategory.other;
+    if (best == SmsCategory.finance && !_amountSignal.hasMatch(body)) {
+      return SmsCategory.other;
+    }
     return best;
   }
 
