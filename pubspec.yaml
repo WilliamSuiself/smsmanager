@@ -1,0 +1,45 @@
+name: smsmanager
+description: "短信管理 App - 隐私优先，数据完全在本地"
+publish_to: 'none'
+version: 0.1.0+1
+
+environment:
+  sdk: ^3.8.0
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  cupertino_icons: ^1.0.8
+
+  # 短信读取走自建 MethodChannel（android/MainActivity.kt queryInbox，支持 sinceMs 增量、无条数上限）
+  # flutter_sms_inbox 已弃用：该库单次查询硬上限 1000 条且分页有 bug，拿不到跨年度历史
+
+  # 运行时权限申请（短信读取属于 dangerous permission，Android 13+ 必须动态申请）
+  permission_handler: ^11.3.1
+
+  # 状态管理
+  provider: ^6.1.2
+
+  # 本地存储（设置、已读标记、忽略规则）
+  shared_preferences: ^2.3.0
+
+  # 获取 app 私有目录（用于 agent 调试路径导出 alerts.json）
+  path_provider: ^2.1.4
+
+  # 时间格式化（金额、日期）
+  intl: ^0.19.0
+
+  # 列表滑动操作（标记已读 / 归档 / 删除）
+  flutter_slidable: ^3.1.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+
+  # tool/ 脚本用的 HTTP 客户端（AI 调 MiniMax API）
+  http: ^1.2.0
+
+flutter:
+  uses-material-design: true
