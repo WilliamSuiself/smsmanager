@@ -1,16 +1,17 @@
-// 入口 - 建行告警短信本地管理 App
-// 数据完全本地化，不联网；所有短信读取走 flutter_sms_inbox (Android only)
+// 入口 - 通用短信管理 App
+// 数据完全本地化，不联网；短信读取走自建 MethodChannel (Android only)
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-import 'models/alert.dart';
-import 'services/ccb_parser.dart';
+import 'models/sms_message.dart';
+import 'pages/ledger_page.dart';
+import 'pages/settings_page.dart';
+import 'pages/todo_page.dart';
 import 'services/sms_service.dart';
-import 'state/alert_list_provider.dart';
-import 'widgets/alert_card.dart';
-import 'widgets/alert_detail_page.dart';
-import 'widgets/alert_group_card.dart';
+import 'state/message_list_provider.dart';
+import 'widgets/message_card.dart';
+import 'widgets/message_detail_page.dart';
 
 final _navigatorKey = GlobalKey<NavigatorState>();
 
@@ -18,62 +19,46 @@ void main() {
   runApp(
     ChangeNotifierProvider(
       create: (_) {
-        final provider = AlertListProvider();
+        final provider = MessageListProvider();
         provider.bootstrap().then((_) async {
-          provider.exportAlertsJson().then((path) {
-            if (path != null) debugPrint('[CCB-Alert] exported alerts to $path');
-          });
-          // 冷启动：点系统通知直达该告警详情
+          // 冷启动：点系统通知直达该短信详情
           final launch = await SmsService.consumeLaunchAlert();
-          if (launch != null) _openLaunchAlert(launch, provider);
+          if (launch != null) _openLaunchMessage(launch, provider);
         });
         // 热态（App 活着时）点通知：原生 onNewIntent 主动推过来
         SmsService.setLaunchAlertHandler(
-          (data) => _openLaunchAlert(data, provider),
+          (data) => _openLaunchMessage(data, provider),
         );
         return provider;
       },
-      child: const CcbAlertApp(),
+      child: const SmsManagerApp(),
     ),
   );
 }
 
-/// 点通知直达详情：优先在已入库告警里按正文匹配；同步还没追上来时用携带参数兜底构造。
-/// 同时触发一次增量同步，让这条新告警立刻进库 / 进列表 / 进向量库。
-void _openLaunchAlert(Map<String, dynamic> data, AlertListProvider provider) {
+/// 点通知直达详情：优先在已入库短信里按正文匹配；同步还没追上来时兜底不跳转。
+void _openLaunchMessage(Map<String, dynamic> data, MessageListProvider provider) {
   final body = data['body'] as String? ?? '';
-  final sender = data['sender'] as String? ?? '';
-  final at = (data['at'] as num?)?.toInt() ?? 0;
   if (body.isEmpty) return;
 
   provider.reload();
 
-  SmsAlert? match;
-  for (final a in provider.alerts) {
-    if (a.body == body) {
-      match = a;
+  SmsMessage? match;
+  for (final m in provider.messages) {
+    if (m.body == body) {
+      match = m;
       break;
     }
   }
-  final alert = match ??
-      CcbParser.parse(
-        id: -1,
-        sender: sender.isEmpty ? '95533' : sender,
-        body: body,
-        receivedAt:
-            at > 0 ? DateTime.fromMillisecondsSinceEpoch(at) : DateTime.now(),
-      );
+  if (match == null) return;
 
   _navigatorKey.currentState?.push(
-    MaterialPageRoute(
-      builder: (_) =>
-          AlertDetailPage(alert: alert, aiTag: provider.aiTags[alert.id]),
-    ),
+    MaterialPageRoute(builder: (_) => MessageDetailPage(message: match!)),
   );
 }
 
-class CcbAlertApp extends StatelessWidget {
-  const CcbAlertApp({super.key});
+class SmsManagerApp extends StatelessWidget {
+  const SmsManagerApp({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -100,19 +85,33 @@ class CcbAlertApp extends StatelessWidget {
   }
 }
 
-class HomeShell extends StatelessWidget {
+class HomeShell extends StatefulWidget {
   const HomeShell({super.key});
 
   @override
+  State<HomeShell> createState() => _HomeShellState();
+}
+
+class _HomeShellState extends State<HomeShell> {
+  int _tab = 0;
+
+  @override
   Widget build(BuildContext context) {
+    final pages = [
+      const MessageListPage(),
+      const LedgerPage(),
+      const TodoPage(),
+      const SettingsPage(),
+    ];
     return Scaffold(
-      body: const AlertListPage(),
+      body: pages[_tab],
       bottomNavigationBar: NavigationBar(
-        selectedIndex: 0,
+        selectedIndex: _tab,
+        onDestinationSelected: (i) => setState(() => _tab = i),
         destinations: const [
-          NavigationDestination(icon: Icon(Icons.notifications_outlined), selectedIcon: Icon(Icons.notifications), label: '告警'),
-          NavigationDestination(icon: Icon(Icons.category_outlined), selectedIcon: Icon(Icons.category), label: '分类'),
-          NavigationDestination(icon: Icon(Icons.search_outlined), selectedIcon: Icon(Icons.search), label: '搜索'),
+          NavigationDestination(icon: Icon(Icons.sms_outlined), selectedIcon: Icon(Icons.sms), label: '消息'),
+          NavigationDestination(icon: Icon(Icons.account_balance_wallet_outlined), selectedIcon: Icon(Icons.account_balance_wallet), label: '账本'),
+          NavigationDestination(icon: Icon(Icons.event_note_outlined), selectedIcon: Icon(Icons.event_note), label: '待办'),
           NavigationDestination(icon: Icon(Icons.settings_outlined), selectedIcon: Icon(Icons.settings), label: '设置'),
         ],
       ),
@@ -120,12 +119,12 @@ class HomeShell extends StatelessWidget {
   }
 }
 
-class AlertListPage extends StatelessWidget {
-  const AlertListPage({super.key});
+class MessageListPage extends StatelessWidget {
+  const MessageListPage({super.key});
 
   @override
   Widget build(BuildContext context) {
-    final provider = context.watch<AlertListProvider>();
+    final provider = context.watch<MessageListProvider>();
     final scheme = Theme.of(context).colorScheme;
 
     return Scaffold(
@@ -134,16 +133,7 @@ class AlertListPage extends StatelessWidget {
         backgroundColor: scheme.surface,
         scrolledUnderElevation: 0,
         actions: [
-          if (provider.gate == PermissionGate.granted) ...[
-            IconButton(
-              tooltip: provider.mode == AlertGroupingMode.folded
-                  ? '切换为平铺'
-                  : '切换为折叠',
-              onPressed: provider.toggleGroupingMode,
-              icon: Icon(provider.mode == AlertGroupingMode.folded
-                  ? Icons.view_agenda_outlined
-                  : Icons.view_headline_outlined),
-            ),
+          if (provider.gate == PermissionGate.granted)
             IconButton(
               tooltip: '刷新',
               onPressed: provider.loading ? null : provider.reload,
@@ -155,10 +145,65 @@ class AlertListPage extends StatelessWidget {
                     )
                   : const Icon(Icons.refresh),
             ),
-          ],
         ],
       ),
-      body: _Body(gate: provider.gate, loading: provider.loading, error: provider.error),
+      body: Column(
+        children: [
+          if (provider.gate == PermissionGate.granted) _CategoryFilterBar(provider: provider),
+          Expanded(
+            child: _Body(gate: provider.gate, loading: provider.loading, error: provider.error),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// 分类筛选 chip 栏：全部 / 账务 / 重要紧急 / 待办 / 垃圾 / 其他
+class _CategoryFilterBar extends StatelessWidget {
+  final MessageListProvider provider;
+  const _CategoryFilterBar({required this.provider});
+
+  @override
+  Widget build(BuildContext context) {
+    final counts = provider.categoryCounts;
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      child: Row(
+        children: [
+          _FilterChip(
+            label: '全部',
+            selected: provider.filter == null,
+            onTap: () => provider.setFilter(null),
+          ),
+          for (final c in SmsCategory.values)
+            _FilterChip(
+              label: '${c.label}(${counts[c] ?? 0})',
+              selected: provider.filter == c,
+              onTap: () => provider.setFilter(c),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _FilterChip extends StatelessWidget {
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+  const _FilterChip({required this.label, required this.selected, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(right: 8),
+      child: ChoiceChip(
+        label: Text(label),
+        selected: selected,
+        onSelected: (_) => onTap(),
+      ),
     );
   }
 }
@@ -177,29 +222,44 @@ class _Body extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    final provider = context.read<AlertListProvider>();
+    final provider = context.read<MessageListProvider>();
 
     if (gate == PermissionGate.denied) return _PermissionPrompt(provider: provider, scheme: scheme);
     if (gate == PermissionGate.unknown) return const Center(child: CircularProgressIndicator());
-    if (loading) return const Center(child: CircularProgressIndicator());
+    if (loading && provider.messages.isEmpty) return const Center(child: CircularProgressIndicator());
     if (error != null) return _ErrorView(error: error!, provider: provider);
 
-    final visibleAlerts = provider.visibleAlerts;
-    if (visibleAlerts.isEmpty) {
+    final visible = context.watch<MessageListProvider>().visibleMessages;
+    if (visible.isEmpty) {
       return _EmptyView(scheme: scheme, provider: provider);
     }
 
     return RefreshIndicator(
       onRefresh: provider.reload,
-      child: provider.mode == AlertGroupingMode.folded
-          ? _FoldedList(groups: provider.groups)
-          : _FlatList(alerts: visibleAlerts, aiTags: provider.aiTags),
+      child: ListView.separated(
+        itemCount: visible.length,
+        separatorBuilder: (_, _) => const Divider(height: 1),
+        itemBuilder: (ctx, i) {
+          final m = visible[i];
+          return MessageCard(
+            message: m,
+            onTap: () {
+              provider.markRead(m.id);
+              Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => MessageDetailPage(message: m)),
+              );
+            },
+            onMarkRead: () => provider.markRead(m.id),
+            onBlockSender: () => provider.blockSender(m.sender),
+          );
+        },
+      ),
     );
   }
 }
 
 class _PermissionPrompt extends StatelessWidget {
-  final AlertListProvider provider;
+  final MessageListProvider provider;
   final ColorScheme scheme;
   const _PermissionPrompt({required this.provider, required this.scheme});
 
@@ -216,7 +276,7 @@ class _PermissionPrompt extends StatelessWidget {
             Text('需要短信权限', style: Theme.of(context).textTheme.titleMedium),
             const SizedBox(height: 8),
             Text(
-              'CCB Alert 只读取建行 95533 等号码段，\n数据 100% 在本地，不联网。',
+              '用于读取并本地分类短信，\n数据 100% 在本地，不联网。',
               textAlign: TextAlign.center,
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: scheme.onSurfaceVariant),
             ),
@@ -235,7 +295,7 @@ class _PermissionPrompt extends StatelessWidget {
 
 class _ErrorView extends StatelessWidget {
   final String error;
-  final AlertListProvider provider;
+  final MessageListProvider provider;
   const _ErrorView({required this.error, required this.provider});
 
   @override
@@ -267,7 +327,7 @@ class _ErrorView extends StatelessWidget {
 
 class _EmptyView extends StatelessWidget {
   final ColorScheme scheme;
-  final AlertListProvider provider;
+  final MessageListProvider provider;
   const _EmptyView({required this.scheme, required this.provider});
 
   @override
@@ -280,10 +340,10 @@ class _EmptyView extends StatelessWidget {
           children: [
             Icon(Icons.inbox_outlined, size: 72, color: scheme.onSurfaceVariant),
             const SizedBox(height: 16),
-            Text('还没有建行告警', style: Theme.of(context).textTheme.titleMedium),
+            Text('还没有短信', style: Theme.of(context).textTheme.titleMedium),
             const SizedBox(height: 8),
             Text(
-              '没有找到来自 95533 等号码段的告警短信。',
+              '没有找到符合当前筛选条件的短信。',
               textAlign: TextAlign.center,
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: scheme.onSurfaceVariant),
             ),
@@ -296,52 +356,6 @@ class _EmptyView extends StatelessWidget {
           ],
         ),
       ),
-    );
-  }
-}
-
-/// 折叠列表（按告警对象分组）
-class _FoldedList extends StatelessWidget {
-  final List<AlertGroup> groups;
-  const _FoldedList({required this.groups});
-
-  @override
-  Widget build(BuildContext context) {
-    return ListView.builder(
-      padding: const EdgeInsets.symmetric(vertical: 8),
-      itemCount: groups.length,
-      itemBuilder: (_, i) => AlertGroupCard(group: groups[i]),
-    );
-  }
-}
-
-/// 平铺列表（每条告警一行，含 AI 标签）
-class _FlatList extends StatelessWidget {
-  final List<SmsAlert> alerts;
-  final Map<int, AiTag> aiTags;
-  const _FlatList({required this.alerts, required this.aiTags});
-
-  @override
-  Widget build(BuildContext context) {
-    return ListView.separated(
-      itemCount: alerts.length,
-      separatorBuilder: (_, _) => const Divider(height: 1),
-      itemBuilder: (ctx, i) {
-        final a = alerts[i];
-        final provider = ctx.read<AlertListProvider>();
-        return AlertCard(
-          alert: a,
-          aiTag: aiTags[a.id],
-          correlation: provider.correlateAlert(a),
-          onTap: () {
-            Navigator.of(context).push(
-              MaterialPageRoute(
-                builder: (_) => AlertDetailPage(alert: a, aiTag: aiTags[a.id]),
-              ),
-            );
-          },
-        );
-      },
     );
   }
 }

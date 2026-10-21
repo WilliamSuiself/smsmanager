@@ -21,10 +21,10 @@ dependencies:
   # 状态管理
   provider: ^6.1.2
 
-  # 本地存储（设置、已读标记、忽略规则）
+  # 本地存储（号码黑名单）
   shared_preferences: ^2.3.0
 
-  # 获取 app 私有目录（用于 agent 调试路径导出 alerts.json）
+  # 获取 app 私有目录（持久化短信库 / 账本 / 待办 JSON 文件）
   path_provider: ^2.1.4
 
   # 时间格式化（金额、日期）
@@ -37,9 +37,6 @@ dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^6.0.0
-
-  # tool/ 脚本用的 HTTP 客户端（AI 调 MiniMax API）
-  http: ^1.2.0
 
 flutter:
   uses-material-design: true
