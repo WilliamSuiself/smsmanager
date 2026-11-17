@@ -1,8 +1,8 @@
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:smsmanager/models/sms_message.dart';
-import 'package:smsmanager/services/message_store.dart';
+import 'package:smsanalyzer/models/sms_message.dart';
+import 'package:smsanalyzer/services/message_store.dart';
 
 void main() {
   group('MessageStore', () {

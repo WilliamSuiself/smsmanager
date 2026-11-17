@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:smsmanager/models/ledger_entry.dart';
-import 'package:smsmanager/services/finance_parser.dart';
+import 'package:smsanalyzer/models/ledger_entry.dart';
+import 'package:smsanalyzer/services/finance_parser.dart';
 
 void main() {
   group('FinanceParser', () {

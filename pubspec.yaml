@@ -1,10 +1,10 @@
-name: smsmanager
-description: "短信管理 App - 隐私优先，数据完全在本地"
+name: smsanalyzer
+description: "短信汇聚分析器 - 隐私优先的本地短信分类管理、关注号码汇聚告警、自动记账与待办"
 publish_to: 'none'
 version: 0.1.0+1
 
 environment:
-  sdk: ^3.8.0
+  sdk: ^3.11.0
 
 dependencies:
   flutter:
@@ -21,10 +21,10 @@ dependencies:
   # 状态管理
   provider: ^6.1.2
 
-  # 本地存储（号码黑名单）
+  # 本地存储（设置、已读标记、忽略规则）
   shared_preferences: ^2.3.0
 
-  # 获取 app 私有目录（持久化短信库 / 账本 / 待办 JSON 文件）
+  # 获取 app 私有目录（用于 agent 调试路径导出 alerts.json）
   path_provider: ^2.1.4
 
   # 时间格式化（金额、日期）
@@ -37,6 +37,9 @@ dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^6.0.0
+
+  # tool/ 脚本用的 HTTP 客户端（AI 调 MiniMax API）
+  http: ^1.2.0
 
 flutter:
   uses-material-design: true

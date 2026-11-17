@@ -7,7 +7,7 @@ import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
 import '../models/sms_message.dart';
-import '../state/message_list_provider.dart';
+import '../state/app_provider.dart';
 
 class MessageDetailPage extends StatelessWidget {
   final SmsMessage message;
@@ -18,7 +18,7 @@ class MessageDetailPage extends StatelessWidget {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final fullTime = DateFormat('yyyy-MM-dd HH:mm:ss').format(message.receivedAt);
-    final provider = context.read<MessageListProvider>();
+    final provider = context.read<AppProvider>();
     final isBlacklisted = provider.blacklist.contains(message.sender);
 
     return Scaffold(

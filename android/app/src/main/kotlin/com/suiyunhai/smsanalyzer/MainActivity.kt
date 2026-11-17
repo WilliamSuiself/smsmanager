@@ -1,4 +1,4 @@
-package com.suiyunhai.smsmanager
+package com.suiyunhai.smsanalyzer
 
 import android.content.Intent
 import android.os.Bundle
@@ -12,7 +12,7 @@ import io.flutter.plugin.common.MethodChannel
 class MainActivity : FlutterActivity() {
 
     companion object {
-        private const val CHANNEL = "smsmanager/sms"
+        private const val CHANNEL = "smsanalyzer/sms"
     }
 
     private var methodChannel: MethodChannel? = null
@@ -61,6 +61,12 @@ class MainActivity : FlutterActivity() {
                 "consumeLaunchAlert" -> {
                     result.success(launchAlert)
                     launchAlert = null
+                }
+                // Dart 侧推送用户关注号码列表（SmsReceiver 通知过滤用）
+                "setWatchlist" -> {
+                    val senders = call.argument<List<String>>("senders") ?: emptyList()
+                    SmsReceiver.saveWatchlist(this, senders)
+                    result.success(true)
                 }
                 else -> result.notImplemented()
             }

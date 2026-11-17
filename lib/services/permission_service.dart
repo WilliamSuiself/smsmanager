@@ -20,10 +20,9 @@ class PermissionService {
   /// - [PermissionStatus.permanentlyDenied] 永久拒绝 → 应该引导用户去设置
   /// - [PermissionStatus.denied] / [PermissionStatus.restricted] 用户拒绝 / 系统限制
   static Future<PermissionStatus> requestSms() async {
-    final status = await Permission.sms.request();
-    // Android 13+ 需要同时申请 notifications 才能正常监听新短信；
-    // 否则 SmsReceiver 发出的通知会被系统静默吞掉，用户完全看不到。
+    // Android 13+ 需要同时申请 notifications 才能正常监听新短信
     await Permission.notification.request();
+    final status = await Permission.sms.request();
     if (status.isPermanentlyDenied) {
       // 引导用户去系统设置
       await openAppSettings();

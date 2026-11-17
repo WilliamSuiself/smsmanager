@@ -6,14 +6,14 @@ import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
 import '../models/ledger_entry.dart';
-import '../state/message_list_provider.dart';
+import '../state/app_provider.dart';
 
 class LedgerPage extends StatelessWidget {
   const LedgerPage({super.key});
 
   @override
   Widget build(BuildContext context) {
-    final provider = context.watch<MessageListProvider>();
+    final provider = context.watch<AppProvider>();
     final scheme = Theme.of(context).colorScheme;
     final totals = provider.monthlyTotals;
     final entries = provider.ledgerEntries;

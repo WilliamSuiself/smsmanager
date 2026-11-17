@@ -5,14 +5,14 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
-import '../state/message_list_provider.dart';
+import '../state/app_provider.dart';
 
 class TodoPage extends StatelessWidget {
   const TodoPage({super.key});
 
   @override
   Widget build(BuildContext context) {
-    final provider = context.watch<MessageListProvider>();
+    final provider = context.watch<AppProvider>();
     final scheme = Theme.of(context).colorScheme;
     final todos = provider.todos;
 

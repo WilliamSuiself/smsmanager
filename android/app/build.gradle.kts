@@ -6,7 +6,7 @@ plugins {
 }
 
 android {
-    namespace = "com.suiyunhai.smsmanager"
+    namespace = "com.suiyunhai.smsanalyzer"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
 
@@ -21,7 +21,7 @@ android {
 
     defaultConfig {
         // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
-        applicationId = "com.suiyunhai.smsmanager"
+        applicationId = "com.suiyunhai.smsanalyzer"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
         // flutter_sms_inbox + permission_handler 都需要 minSdk 21

@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:smsmanager/models/sms_message.dart';
-import 'package:smsmanager/services/sms_classifier.dart';
+import 'package:smsanalyzer/models/sms_message.dart';
+import 'package:smsanalyzer/services/sms_classifier.dart';
 
 void main() {
   group('SmsClassifier 规则分类', () {

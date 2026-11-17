@@ -1,5 +1,5 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
-    <!-- 建行告警 App 所需权限 -->
+    <!-- 短信汇聚分析器所需权限 -->
     <uses-permission android:name="android.permission.READ_SMS"/>
     <uses-permission android:name="android.permission.RECEIVE_SMS"/>
     <uses-permission android:name="android.permission.SEND_SMS"/>
@@ -14,7 +14,7 @@
     </queries>
 
     <application
-        android:label="短信管理"
+        android:label="短信汇聚分析器"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
         <activity
